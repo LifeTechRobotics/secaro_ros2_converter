@@ -26,16 +26,15 @@ class SecaroWiFiNode(Node):
             0
         )
 
+        self.timer = self.create_timer(0.1, self.timer_callback)
+
         # デバッグログの有効か無効かのROS2パラメータを取得
         # 初期値はFalseでTrueにすると送信成功時にもログを表示する
         # Falseでもエラーログは表示する
         self.declare_parameter('enable_log', True)
         self.enable_log = self.get_parameter('enable_log').get_parameter_value().bool_value
 
-        # ROS2パラメータよりロボット側のIPアドレスを取得
-        self.declare_parameter('robot_ip_addr', '0.0.0.0')
-        # 制御対象のロボットのIP
-        self.target_ip = self.get_parameter('robot_ip_addr').get_parameter_value().string_value
+        self.target_ip = None
 
         # UDP通信の初期化
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
@@ -72,29 +71,44 @@ class SecaroWiFiNode(Node):
         #     send_cmd = 'S\n'
 
         # UDP送信
+        # 制御対象が見つかっていない場合は送信しない
+        if(self.target_ip != None):
+            try:
+                # 送信成功ログ(確認用)
+                if(self.enable_log):
+                    self.get_logger().info("IP: %s 送信: %s" % self.target_ip % send_cmd)
+                
+                self.sock.sendto(send_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
+            except Exception as e:
+                # エラーログ
+                self.get_logger().error('error content :%s' % e)
+
+            # 速度変更コマンドのUDP送信
+            if((self.prev_linear_velocity - abs(msg.linear.y)) != 0):
+                # 最終更新時の速度を更新
+                self.prev_linear_velocity = abs(msg.linear.y)
+
+                # 速度変更コマンドの作成
+                left_vel_cmd = 'l' + str(self.prev_linear_velocity) + '\n'
+                right_vel_cmd = 'l' + str(self.prev_linear_velocity) + '\n'
+
+                # 左輪速度変更コマンドの送信
+                self.sock.sendto(left_vel_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
+
+                # 右輪速度変更コマンドの送信
+                self.sock.sendto(right_vel_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
+
+    # 0.1sごとに呼び出される。
+    def timer_callback(self):
         try:
-            # 送信成功ログ(確認用)
-            if(self.enable_log):
-                self.get_logger().info("IP: %s 送信: %s" % self.target_ip % send_cmd)
-            self.sock.sendto(send_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
-        except Exception as e:
-            # エラーログ
-            self.get_logger().error('%s' % e)
-
-        # 速度変更コマンドのUDP送信
-        if((self.prev_linear_velocity - abs(msg.linear.y)) != 0):
-            # 最終更新時の速度を更新
-            self.prev_linear_velocity = abs(msg.linear.y)
-
-            # 速度変更コマンドの作成
-            left_vel_cmd = 'l' + str(self.prev_linear_velocity) + '\n'
-            right_vel_cmd = 'l' + str(self.prev_linear_velocity) + '\n'
-
-            # 左輪速度変更コマンドの送信
-            self.sock.sendto(left_vel_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
-
-            # 右輪速度変更コマンドの送信
-            self.sock.sendto(right_vel_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
+            data, addr = self.sock.recvfrom(1024)
+            msg = data.decode()
+            if ":" in msg:
+                name, ip = msg.split(":")
+                self.target_ip = ip
+                self.get_logger().info("Found Device. name:%s ip:%s" %name %ip)
+        except BlockingIOError:
+            pass
 
 def main(args=None):
     rclpy.init(args=args)
