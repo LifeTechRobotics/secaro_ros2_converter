@@ -100,6 +100,8 @@ class SecaroWiFiNode(Node):
 
     # 0.1sごとに呼び出される。
     def timer_callback(self):
+        if(self.target_ip == None):
+            self.get_logger().info("Scan Device ...")
         try:
             data, addr = self.sock.recvfrom(1024)
             msg = data.decode()
