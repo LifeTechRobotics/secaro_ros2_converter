@@ -17,14 +17,17 @@ class SecaroWiFiNode(Node):
     def __init__(self):
         super().__init__('secaro_wifi_node')
 
+        self.declare_parameter('cmd_vel_topic_name', '/cmd_vel')
+        self.topic_name = self.get_parameter('cmd_vel_topic_name').get_parameter_value().string_value
+
         # サブスクライバーの初期化
         # geometry_msgs/msg/Twist
-        # トピック名： /cmd_vel
+        # トピック名： パラメータ
         # コールバック： topic_callback
         # QoS： 0
         self.subscriber_ = self.create_subscription(
             Twist,
-            '/cmd_vel',
+            self.topic_name,
             self.topic_callback,
             0
         )
