@@ -6,7 +6,7 @@ from geometry_msgs.msg import Twist
 import socket
 
 # secaro用モジュール
-import secaro
+from .secaro import util
 
 # UDP通信用
 UDP_PORT_CONTROL_BROADCAST = 4210
@@ -103,7 +103,7 @@ class SecaroWiFiNode(Node):
             ROS2 Twist型メッセージ
         """
         # Twistから動作コマンド（前進、後退、右旋回、左旋回）を取得
-        send_cmd = secaro.get_motion_cmd(linear_velocity=msg.linear.y, angular_velocity=msg.angular.z)
+        send_cmd = util.get_motion_cmd(linear_velocity=msg.linear.y, angular_velocity=msg.angular.z)
 
         self.udp_send(send_cmd=send_cmd)
 
@@ -117,7 +117,7 @@ class SecaroWiFiNode(Node):
             ROS2 Twist型メッセージ
         """
         # Twistから速度コマンドを取得(1~9)
-        velocity_cmd = secaro.get_velocity_cmd(vel=msg.linear.y)
+        velocity_cmd = util.get_velocity_cmd(vel=msg.linear.y)
         # 速度変更コマンドのUDP送信
         # 前回の速度と変更がある場合のみ送信
         # prev_linear_velocityは０で初期化されてるので初回は必ず速度コマンドを送信する
