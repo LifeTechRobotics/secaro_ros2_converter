@@ -47,3 +47,8 @@ def generate_launch_description():
         )
     ])
 ```
+
+# 実行
+```
+ros2 launch secaro_ros2_converter wifi.launch.py
+```
