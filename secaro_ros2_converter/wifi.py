@@ -55,6 +55,10 @@ class SecaroWiFiNode(Node):
         self.prev_right_velocity = 0
 
         self.get_logger().info("Start %s " %self.get_name())
+        self.get_logger().info(f"Parameter: "
+    f"enable_log: {self.enable_log},"
+    f"cmd_vel_topic_name: {self.topic_name},"
+    f"wheel_base: {self.wheel_base:.3f}")
 
     def topic_callback(self, msg:Twist):
         """
