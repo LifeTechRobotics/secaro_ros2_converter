@@ -40,6 +40,9 @@ class SecaroWiFiNode(Node):
         self.declare_parameter('enable_log', True)
         self.enable_log = self.get_parameter('enable_log').get_parameter_value().bool_value
 
+        self.declare_parameter('wheel_base', 1.0)
+        self.wheel_base = self.get_parameter('wheel_base').get_parameter_value().double_value
+
         self.target_ip = None
 
         # UDP通信の初期化
@@ -48,7 +51,8 @@ class SecaroWiFiNode(Node):
         self.sock.setblocking(False)
 
         # 最終更新時の速度
-        self.prev_linear_velocity = 0
+        self.prev_left_velocity = 0
+        self.prev_right_velocity = 0
 
         self.get_logger().info("Start %s " %self.get_name())
 
@@ -72,7 +76,7 @@ class SecaroWiFiNode(Node):
 
             
         else:
-            self.get_logger().error("No Device found yet.")
+            self.get_logger().error("まだデバイスが見つかっていないのでコマンドの送信を取り消しました。")
 
     def timer_callback(self):
         """
@@ -81,17 +85,17 @@ class SecaroWiFiNode(Node):
         """
 
         if(self.target_ip == None):
-            self.get_logger().info("Scan Device ...")
+            self.get_logger().info("デバイスを探しています")
 
-        try:
-            data, addr = self.sock.recvfrom(1024)
-            msg = data.decode()
-            if ":" in msg:
-                name, ip = msg.split(":")
-                self.target_ip = ip
-                self.get_logger().info("Found Device. name:%s ip:%s" % (name, ip))
-        except BlockingIOError:
-            pass
+            try:
+                data, addr = self.sock.recvfrom(1024)
+                msg = data.decode()
+                if ":" in msg:
+                    name, ip = msg.split(":")
+                    self.target_ip = ip
+                    self.get_logger().info("デバイスが見つかりました. 名前:%s IPアドレス:%s" % (name, ip))
+            except BlockingIOError:
+                pass
 
     def send_motion_cmd(self, msg:Twist):
         """
@@ -117,18 +121,25 @@ class SecaroWiFiNode(Node):
             ROS2 Twist型メッセージ
         """
         # Twistから速度コマンドを取得(1~9)
-        velocity_cmd = util.get_velocity_cmd(vel=msg.linear.x)
+        (l_vel, r_vel) = util.get_velocity_cmd(linear_velocity=msg.linear.x, angular_velocity=msg.angular.z, wheel_base=self.wheel_base)
         # 速度変更コマンドのUDP送信
         # 前回の速度と変更がある場合のみ送信
         # prev_linear_velocityは０で初期化されてるので初回は必ず速度コマンドを送信する
-        if((self.prev_linear_velocity - velocity_cmd) != 0):
+        if((self.prev_left_velocity - l_vel) != 0):
             # 最終更新時の速度を更新
-            self.prev_linear_velocity = velocity_cmd
+            self.prev_left_velocity = l_vel
             # 速度変更コマンドの作成
-            left_vel_cmd = 'l' + str(self.prev_linear_velocity) + '\n'
-            right_vel_cmd = 'r' + str(self.prev_linear_velocity) + '\n'
+            left_vel_cmd = 'l' + str(self.prev_left_velocity) + '\n'
+            
             # 左輪速度変更コマンドの送信
             self.udp_send(send_cmd=left_vel_cmd)
+            
+        if((self.prev_right_velocity - r_vel) != 0):
+            # 最終更新時の速度を更新
+            self.prev_right_velocity = r_vel
+            # 速度変更コマンドの作成
+            right_vel_cmd = 'r' + str(self.prev_right_velocity) + '\n'
+
             # 右輪速度変更コマンドの送信
             self.udp_send(send_cmd=right_vel_cmd)
 
@@ -144,12 +155,12 @@ class SecaroWiFiNode(Node):
         try:
             # 送信成功ログ(確認用)
             if(self.enable_log):
-                self.get_logger().info("IP: %s. send content: %s" % (self.target_ip, send_cmd))
+                self.get_logger().info("IP: %s. 送信内容: %s" % (self.target_ip, send_cmd))
             
             self.sock.sendto(send_cmd.encode('utf-8'), (self.target_ip, UDP_PORT_CONTROL))
         except Exception as e:
             # エラーログ
-            self.get_logger().error('error content :%s' % e)
+            self.get_logger().error('エラー内容 :%s' % e)
 
 
 def main(args=None):
