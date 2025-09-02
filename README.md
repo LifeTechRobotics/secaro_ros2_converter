@@ -41,6 +41,7 @@ def generate_launch_description():
             parameters= [
                 {'enable_log': True},
                 {'cmd_vel_topic_name': '/cmd_vel'},
+                {'wheel_base': 1.0}
             ]
         )
     ])
