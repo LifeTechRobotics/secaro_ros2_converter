@@ -25,16 +25,16 @@ def get_motion_cmd(linear_velocity:float, angular_velocity: float):
     elif(linear_velocity < 0.0):
         cmd = 'B\n'
 
-    # 旋回速度＞０で右旋回
+    # 旋回速度＞０で左旋回
     elif(angular_velocity > 0.0):
-        cmd = 'R\n'
-
-    # 旋回速度＜０で左旋回
-    elif(angular_velocity < 0.0):
         cmd = 'L\n'
 
+    # 旋回速度＜０で右旋回
+    elif(angular_velocity < 0.0):
+        cmd = 'R\n'
+
     # 並進速度も旋回速度も入力がない場合、ストップするコマンド
-    # elif(msg.angular.z == 0.0 & msg.linear.y == 0.0):
+    # elif(msg.angular.z == 0.0 & msg.linear.x == 0.0):
     #     send_cmd = 'S\n'
 
     return cmd
