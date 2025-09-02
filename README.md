@@ -20,6 +20,7 @@ colcon build --symlink-install
 以下は**wifi.launch.py**のコピペ
 - **enable_log**はTrueでデバッグ出力が有効になる。
 - **cmd_vel_topic_name**はTwist型のサブスクライバーのトピック名を決める
+- **wheel_base**はロボットの左右間の車輪の距離を決める
 ```py:wifi.launch.py
 from launch import LaunchDescription
 from launch.actions import DeclareLaunchArgument
