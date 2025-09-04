@@ -34,7 +34,7 @@ def get_motion_cmd(linear_velocity:float, angular_velocity: float):
         # 「旋回速度 < 0」で右旋回
         else:
             cmd = 'R\n'
-    elif(linear_velocity == 0.0 & angular_velocity == 0.0):
+    elif(linear_velocity == 0.0 and angular_velocity == 0.0):
         # 「入力なし」で停止
         cmd = 'S\n'
 
